@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 )
 
 func main() {
 	idMap := map[string]map[string]int{}
+	initialValue := 42
 	incrementBy := 5
 
 	router := gin.Default()
@@ -24,15 +26,15 @@ func main() {
 				context.String(http.StatusOK, fmt.Sprintf("%d", idMap[environment][name]))
 			} else {
 				// add unfound name
-				fmt.Println("Name ", name, " was not found in Environment ", environment, ", adding it")
-				idMap[environment][name] = 1
-				context.String(http.StatusOK, "1")
+				fmt.Printf("Name %s was not found in Environment %s, adding it\n", name, environment)
+				idMap[environment][name] = initialValue
+				context.String(http.StatusOK, strconv.Itoa(initialValue))
 			}
 		} else {
-			// add unfound environment
-			fmt.Println("Environment ", environment, " not found, adding it")
-			idMap[environment] = map[string]int{name: 1}
-			context.String(http.StatusOK, "1")
+			// add unfound environment and name
+			fmt.Printf("Environment %s was not found, adding it\n", environment)
+			idMap[environment] = map[string]int{name: initialValue}
+			context.String(http.StatusOK, strconv.Itoa(initialValue))
 		}
 	})
 
