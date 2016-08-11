@@ -1,4 +1,4 @@
-# ridi
-Request ID Incrementer
+# id-incrementer
+ID Incrementer
 
-A simple API service which recieves a table name, and increments and returns an ID.
+Serve an API which receives a name and environment, and increments and returns an ID.
