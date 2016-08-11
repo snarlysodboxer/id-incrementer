@@ -45,6 +45,15 @@ func getOrSetID(name, environment string, passedID int) (int, string) {
 func main() {
 	router := gin.Default()
 
+	router.GET("/list", func(context *gin.Context) {
+		context.JSON(http.StatusOK, gin.H{"idMap": idMap})
+	})
+
+	router.GET("/getter/:environment/:name", func(context *gin.Context) {
+		status, id := getOrSetID(context.Param("name"), context.Param("environment"), 0)
+		context.String(status, id)
+	})
+
 	router.POST("/setter", func(context *gin.Context) {
 		passedID, err := strconv.Atoi(context.PostForm("id"))
 		if err != nil {
@@ -57,11 +66,6 @@ func main() {
 			status, id := getOrSetID(context.PostForm("name"), context.PostForm("environment"), passedID)
 			context.String(status, id)
 		}
-	})
-
-	router.GET("/:environment/:name", func(context *gin.Context) {
-		status, id := getOrSetID(context.Param("name"), context.Param("environment"), 0)
-		context.String(status, id)
 	})
 
 	router.Run("localhost:8080")
