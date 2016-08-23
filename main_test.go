@@ -1,11 +1,30 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 )
 
 // TODO test paralellism and race conditions, test e2e, test benchmark
+
+func TestGetterEndpoint(t *testing.T) {
+	testRouter := SetupRouter()
+	request, err := http.NewRequest("GET", "/getter/live/records", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	response := httptest.NewRecorder()
+	testRouter.ServeHTTP(response, request)
+	if response.Code != 200 {
+		t.Error("Expected status code 200, got ", response.Code)
+	}
+	if response.Body.String() != strconv.Itoa(initialValue) {
+		t.Errorf("Expected %d, got %s", initialValue, response.Body)
+	}
+}
 
 func TestGetID(t *testing.T) {
 	status, id := getID("live", "records")

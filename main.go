@@ -16,42 +16,35 @@ var incrementBy = 5
 var mutex = &sync.Mutex{}
 
 func getID(name, environment string) (int, string) {
-	// check if the environment is found, otherwise add it
+	// check if the environment is found
 	if _, ok := idMap[environment]; ok {
-		// check if the name is found, otherwise add it
+		// check if the name is found
 		if id, ok := idMap[environment][name]; ok {
 			idMap[environment][name] = id + incrementBy
 		} else {
 			// add unfound name
-			fmt.Printf("Name %s was not found in Environment %s, adding it\n", name, environment)
+			fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
 			idMap[environment][name] = initialValue
 		}
 	} else {
 		// add unfound environment and name
-		fmt.Printf("Environment %s was not found, adding it along with the name %s\n", environment)
+		fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
 		idMap[environment] = map[string]int{name: initialValue}
 	}
 	return http.StatusOK, strconv.Itoa(idMap[environment][name])
 }
 
 func setID(name, environment string, id int) (int, string) {
-	// check if the environment is found, otherwise add it
+	fmt.Printf("Setting `%s/%s` to `%d`\n", environment, name, id)
 	if _, ok := idMap[environment]; ok {
-		// check if the name is found, otherwise add it
-		if _, ok := idMap[environment][name]; !ok {
-			fmt.Printf("Name %s was not found in Environment %s, adding it\n", name, environment)
-		}
-		// add unfound name
 		idMap[environment][name] = id
 	} else {
-		// add unfound environment and name
-		fmt.Printf("Environment %s was not found, adding it along with the name %s\n", environment)
 		idMap[environment] = map[string]int{name: id}
 	}
 	return http.StatusOK, strconv.Itoa(idMap[environment][name])
 }
 
-func main() {
+func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
 	router.GET("/list", func(context *gin.Context) {
@@ -79,5 +72,10 @@ func main() {
 		context.String(status, id)
 	})
 
+	return router
+}
+
+func main() {
+	router := SetupRouter()
 	router.Run("localhost:8080")
 }
