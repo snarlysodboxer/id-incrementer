@@ -10,13 +10,17 @@ import (
 
 // TODO setup auto API documentation, add auth, add persistent storage, add settings flags or file
 
-type idMap map[string]map[string]int
-
 var initialValue = 42
 var incrementBy = 5
 var mutex = &sync.Mutex{}
 
-func (ids idMap) Get(name, environment string) (int, string) {
+type idMap map[string]map[string]int
+
+func NewIDMap() idMap {
+	return map[string]map[string]int{}
+}
+
+func (ids idMap) Get(name, environment string) (int, int) {
 	// check if the environment is found
 	if _, ok := ids[environment]; ok {
 		// check if the name is found
@@ -30,16 +34,16 @@ func (ids idMap) Get(name, environment string) (int, string) {
 		// add unfound environment and name
 		ids[environment] = map[string]int{name: initialValue}
 	}
-	return http.StatusOK, strconv.Itoa(ids[environment][name])
+	return http.StatusOK, ids[environment][name]
 }
 
-func (ids idMap) Set(name, environment string, id int) (int, string) {
+func (ids idMap) Set(name, environment string, id int) (int, int) {
 	if _, ok := ids[environment]; ok {
 		ids[environment][name] = id
 	} else {
 		ids[environment] = map[string]int{name: id}
 	}
-	return http.StatusOK, strconv.Itoa(ids[environment][name])
+	return http.StatusOK, ids[environment][name]
 }
 
 func (ids idMap) SetupRouter() *gin.Engine {
@@ -55,30 +59,29 @@ func (ids idMap) SetupRouter() *gin.Engine {
 		mutex.Lock()
 		status, id := ids.Get(context.Param("name"), context.Param("environment"))
 		mutex.Unlock()
-		context.String(status, id)
+		context.JSON(status, map[string]int{"id": id})
 	})
 
 	router.POST("/setter", func(context *gin.Context) {
 		if context.PostForm("id") == "" {
-			context.String(http.StatusBadRequest, "ID field was not passed or is empty")
+			context.JSON(http.StatusBadRequest, `{"error": "ID field was not passed or is empty"}`)
 			return
 		}
 		passedID, err := strconv.Atoi(context.PostForm("id"))
 		if err != nil {
-			context.String(http.StatusBadRequest, fmt.Sprintf("Error converting `%s` to an integer", context.PostForm("id")))
+			message := fmt.Sprintf("Error converting `%s` to an integer", context.PostForm("id"))
+			msg := map[string]string{"error": message}
+			context.JSON(http.StatusBadRequest, msg)
 			return
 		}
 		mutex.Lock()
 		status, id := ids.Set(context.PostForm("name"), context.PostForm("environment"), passedID)
 		mutex.Unlock()
-		context.String(status, id)
+		idM := map[string]int{"id": id}
+		context.JSON(status, idM)
 	})
 
 	return router
-}
-
-func NewIDMap() idMap {
-	return map[string]map[string]int{}
 }
 
 func main() {

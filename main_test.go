@@ -3,15 +3,25 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	// "fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	// "reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
 
 // TODO test paralellism and race conditions, test e2e, test benchmark
+
+type TestID struct {
+	ID int
+}
+
+type TestError struct {
+	Error string
+}
 
 func TestListerEndpoint(t *testing.T) {
 	// setup
@@ -33,7 +43,7 @@ func TestListerEndpoint(t *testing.T) {
 	// test for reception of JSON list
 	jsonIdMap, err := json.Marshal(ids)
 	if err != nil {
-		t.Error("Couldn't marshal mocked IDs, your test is broken")
+		t.Error("Couldn't marshal mocked IDs, this test is broken")
 	}
 	responseJson := strings.TrimSpace(response.Body.String())
 	presetJson := strings.TrimSpace(string(jsonIdMap))
@@ -58,9 +68,48 @@ func TestGetterEndpoint(t *testing.T) {
 		t.Error("Expected status code 200, got ", response.Code)
 	}
 
-	// test for initial value response
-	if response.Body.String() != strconv.Itoa(initialValue) {
-		t.Errorf("Expected %d, got %s", initialValue, response.Body.String())
+	// test for reception of JSON encoded id
+	var id TestID
+	err = json.Unmarshal(response.Body.Bytes(), &id)
+	if err != nil {
+		t.Errorf("Unable to unmarshal `%s`", response.Body)
+	}
+	if id.ID != initialValue {
+		t.Errorf("Expected `%d`, got `%d`", initialValue, id.ID)
+	}
+}
+
+func TestSetterEndpointBadData(t *testing.T) {
+	// setup
+	number := "56L"
+	ids := NewIDMap()
+	testRouter := ids.SetupRouter()
+	form := url.Values{}
+	form.Add("environment", "live")
+	form.Add("name", "records_name")
+	form.Add("id", number)
+	request, err := http.NewRequest("POST", "/setter", bytes.NewBufferString(form.Encode()))
+	if err != nil {
+		t.Error(err)
+	}
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	response := httptest.NewRecorder()
+	testRouter.ServeHTTP(response, request)
+
+	// test for 400 response code
+	if response.Code != 400 {
+		t.Error("Expected status code 400, got ", response.Code)
+	}
+
+	// test for JSON encoded error
+	var testError TestError
+	err = json.Unmarshal(response.Body.Bytes(), &testError)
+	if err != nil {
+		t.Errorf("Unable to unmarshal `%s`", response.Body)
+	}
+	if testError.Error == "" {
+		t.Errorf("Expected an `error` field, couldn't find any in `%v`", testError)
 	}
 }
 
@@ -87,9 +136,14 @@ func TestSetterEndpoint(t *testing.T) {
 		t.Error("Expected status code 200, got ", response.Code)
 	}
 
-	// test for passed value as response
-	if response.Body.String() != strconv.Itoa(number) {
-		t.Errorf("Expected %d, got `%s`", number, response.Body.String())
+	// test for passed JSON encoded id
+	var id TestID
+	err = json.Unmarshal(response.Body.Bytes(), &id)
+	if err != nil {
+		t.Errorf("Unable to unmarshal `%s`", response.Body)
+	}
+	if id.ID != number {
+		t.Errorf("Expected `%d`, got `%s`", number, id.ID)
 	}
 
 	//// ensure the number remains and gets incremented
@@ -105,9 +159,13 @@ func TestSetterEndpoint(t *testing.T) {
 		t.Error("Expected status code 200, got ", response.Code)
 	}
 
-	// test for incremented passed value as response
-	if response.Body.String() != strconv.Itoa(number+incrementBy) {
-		t.Errorf("Expected %d, got `%s`", number+incrementBy, response.Body.String())
+	// test for incremented JSON encoded id
+	err = json.Unmarshal(response.Body.Bytes(), &id)
+	if err != nil {
+		t.Errorf("Unable to unmarshal `%s`", response.Body)
+	}
+	if id.ID != number+incrementBy {
+		t.Errorf("Expected `%d`, got `%s`", number+incrementBy, id.ID)
 	}
 }
 
@@ -122,8 +180,8 @@ func TestGet(t *testing.T) {
 	}
 
 	// test for new initial value
-	if id != strconv.Itoa(initialValue) {
-		t.Errorf("Expected %d, got %s", initialValue, id)
+	if id != initialValue {
+		t.Errorf("Expected %d, got %d", initialValue, id)
 	}
 
 	// test for 200 response
@@ -133,8 +191,8 @@ func TestGet(t *testing.T) {
 	}
 
 	// test for incremented existing value
-	if id != strconv.Itoa(initialValue+incrementBy) {
-		t.Errorf("Expected %d, got %s", initialValue+incrementBy, id)
+	if id != initialValue+incrementBy {
+		t.Errorf("Expected %d, got %d", initialValue+incrementBy, id)
 	}
 }
 
@@ -149,7 +207,7 @@ func TestSet(t *testing.T) {
 	}
 
 	// test for expected id
-	if id != "4242" {
+	if id != 4242 {
 		t.Error("Expected 4242, got ", id)
 	}
 
@@ -160,7 +218,7 @@ func TestSet(t *testing.T) {
 	}
 
 	// test for expected id
-	if id != "4242" {
+	if id != 4242 {
 		t.Error("Expected 4242 a second time, got ", id)
 	}
 }
