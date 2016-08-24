@@ -24,19 +24,16 @@ func (ids idMap) Get(name, environment string) (int, string) {
 			ids[environment][name] = id + incrementBy
 		} else {
 			// add unfound name
-			// fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
 			ids[environment][name] = initialValue
 		}
 	} else {
 		// add unfound environment and name
-		// fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
 		ids[environment] = map[string]int{name: initialValue}
 	}
 	return http.StatusOK, strconv.Itoa(ids[environment][name])
 }
 
 func (ids idMap) Set(name, environment string, id int) (int, string) {
-	// fmt.Printf("Setting `%s/%s` to `%d`\n", environment, name, id)
 	if _, ok := ids[environment]; ok {
 		ids[environment][name] = id
 	} else {
@@ -63,12 +60,12 @@ func (ids idMap) SetupRouter() *gin.Engine {
 
 	router.POST("/setter", func(context *gin.Context) {
 		if context.PostForm("id") == "" {
-			context.String(http.StatusBadRequest, fmt.Sprintf("`id` field was not passed or is empty"))
+			context.String(http.StatusBadRequest, "ID field was not passed or is empty")
 			return
 		}
 		passedID, err := strconv.Atoi(context.PostForm("id"))
 		if err != nil {
-			context.String(http.StatusBadRequest, fmt.Sprintf("Error converting %s to an integer", context.PostForm("id")))
+			context.String(http.StatusBadRequest, fmt.Sprintf("Error converting `%s` to an integer", context.PostForm("id")))
 			return
 		}
 		mutex.Lock()
