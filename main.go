@@ -23,19 +23,19 @@ func getID(name, environment string) (int, string) {
 			idMap[environment][name] = id + incrementBy
 		} else {
 			// add unfound name
-			fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
+			// fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
 			idMap[environment][name] = initialValue
 		}
 	} else {
 		// add unfound environment and name
-		fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
+		// fmt.Printf("Adding `%s/%s` with initial value `%d`\n", environment, name, initialValue)
 		idMap[environment] = map[string]int{name: initialValue}
 	}
 	return http.StatusOK, strconv.Itoa(idMap[environment][name])
 }
 
 func setID(name, environment string, id int) (int, string) {
-	fmt.Printf("Setting `%s/%s` to `%d`\n", environment, name, id)
+	// fmt.Printf("Setting `%s/%s` to `%d`\n", environment, name, id)
 	if _, ok := idMap[environment]; ok {
 		idMap[environment][name] = id
 	} else {
@@ -47,9 +47,9 @@ func setID(name, environment string, id int) (int, string) {
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
-	router.GET("/list", func(context *gin.Context) {
+	router.GET("/lister", func(context *gin.Context) {
 		mutex.Lock()
-		context.JSON(http.StatusOK, gin.H{"idMap": idMap})
+		context.JSON(http.StatusOK, idMap)
 		mutex.Unlock()
 	})
 
@@ -61,6 +61,10 @@ func SetupRouter() *gin.Engine {
 	})
 
 	router.POST("/setter", func(context *gin.Context) {
+		if context.PostForm("id") == "" {
+			context.String(http.StatusBadRequest, fmt.Sprintf("`id` field was not passed or is empty"))
+			return
+		}
 		passedID, err := strconv.Atoi(context.PostForm("id"))
 		if err != nil {
 			context.String(http.StatusBadRequest, fmt.Sprintf("Error converting %s to an integer", context.PostForm("id")))
