@@ -198,6 +198,7 @@ func TestGet(t *testing.T) {
 func TestSet(t *testing.T) {
 	// setup
 	ids := NewIDMap()
+	ids["test"] = map[string]int{"thisisthat": 5432}
 	status, id := ids.Set("live", "records", 4242)
 
 	// test for 200 status
@@ -221,7 +222,10 @@ func TestSet(t *testing.T) {
 		t.Error("Expected 4242 a second time, got ", id)
 	}
 
-	// TODO test that existing data remained
+	// test that existing data remained
+	if ids["test"]["thisisthat"] != 5432 {
+		t.Error("Expected 5432, got ", ids["test"]["thisisthat"])
+	}
 }
 
 func TestParallelGetSetList(t *testing.T) {
