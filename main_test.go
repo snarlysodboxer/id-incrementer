@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-// TODO test benchmark
+// Test with `GIN_MODE=release go test -race -cpu 1 -bench '.*'`
 
 type TestID struct {
 	ID int
@@ -220,6 +220,8 @@ func TestSet(t *testing.T) {
 	if id != 4242 {
 		t.Error("Expected 4242 a second time, got ", id)
 	}
+
+	// TODO test that existing data remained
 }
 
 func TestParallelGetSetList(t *testing.T) {
@@ -270,6 +272,24 @@ func TestParallelGetSetList(t *testing.T) {
 				response := httptest.NewRecorder()
 				testRouter.ServeHTTP(response, listRequest)
 			})
+		}
+	})
+}
+
+func BenchmarkGetParallel(b *testing.B) {
+	// setup
+	ids := NewIDMap()
+	testRouter := ids.SetupRouter()
+	getRequest, err := http.NewRequest("GET", "/getter/live/records", nil)
+	if err != nil {
+		b.Error(err)
+	}
+
+	// benchmark getter
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			response := httptest.NewRecorder()
+			testRouter.ServeHTTP(response, getRequest)
 		}
 	})
 }

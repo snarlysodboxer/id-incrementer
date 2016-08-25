@@ -47,7 +47,12 @@ func (ids idMap) Set(name, environment string, id int) (int, int) {
 }
 
 func (ids idMap) SetupRouter() *gin.Engine {
+	// log to stdout
 	router := gin.Default()
+
+	// // don't log to stdout (helpful for testing)
+	// router := gin.New()
+	// router.Use(gin.Recovery())
 
 	router.GET("/lister", func(context *gin.Context) {
 		mutex.Lock()
