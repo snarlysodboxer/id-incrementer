@@ -3,17 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	// "fmt"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	// "reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-// TODO test paralellism and race conditions, test e2e, test benchmark
+// TODO test benchmark
 
 type TestID struct {
 	ID int
@@ -221,4 +220,56 @@ func TestSet(t *testing.T) {
 	if id != 4242 {
 		t.Error("Expected 4242 a second time, got ", id)
 	}
+}
+
+func TestParallelGetSetList(t *testing.T) {
+	// setup
+	number := 56
+	ids := NewIDMap()
+	testRouter := ids.SetupRouter()
+
+	// setup setRequest
+	form := url.Values{}
+	form.Add("environment", "live")
+	form.Add("name", "records_name")
+	form.Add("id", strconv.Itoa(number))
+	setRequest, err := http.NewRequest("POST", "/setter", bytes.NewBufferString(form.Encode()))
+	if err != nil {
+		t.Error(err)
+	}
+	setRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	setRequest.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+
+	// setup getRequest
+	getRequest, err := http.NewRequest("GET", "/getter/live/records", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// setup listRequest
+	listRequest, err := http.NewRequest("GET", "/lister", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test in parallel
+	t.Run("parallel_group", func(t *testing.T) {
+		for i := 0; i < 1000; i++ {
+			t.Run(fmt.Sprintf("TestSetter%d", i), func(t *testing.T) {
+				t.Parallel()
+				response := httptest.NewRecorder()
+				testRouter.ServeHTTP(response, setRequest)
+			})
+			t.Run(fmt.Sprintf("TestGetter%d", i), func(t *testing.T) {
+				t.Parallel()
+				response := httptest.NewRecorder()
+				testRouter.ServeHTTP(response, getRequest)
+			})
+			t.Run(fmt.Sprintf("TestLister%d", i), func(t *testing.T) {
+				t.Parallel()
+				response := httptest.NewRecorder()
+				testRouter.ServeHTTP(response, listRequest)
+			})
+		}
+	})
 }

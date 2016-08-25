@@ -58,13 +58,15 @@ func (ids idMap) SetupRouter() *gin.Engine {
 	router.GET("/getter/:environment/:name", func(context *gin.Context) {
 		mutex.Lock()
 		status, id := ids.Get(context.Param("name"), context.Param("environment"))
-		mutex.Unlock()
 		context.JSON(status, map[string]int{"id": id})
+		mutex.Unlock()
 	})
 
 	router.POST("/setter", func(context *gin.Context) {
+		mutex.Lock()
 		if context.PostForm("id") == "" {
 			context.JSON(http.StatusBadRequest, `{"error": "ID field was not passed or is empty"}`)
+			mutex.Unlock()
 			return
 		}
 		passedID, err := strconv.Atoi(context.PostForm("id"))
@@ -72,13 +74,13 @@ func (ids idMap) SetupRouter() *gin.Engine {
 			message := fmt.Sprintf("Error converting `%s` to an integer", context.PostForm("id"))
 			msg := map[string]string{"error": message}
 			context.JSON(http.StatusBadRequest, msg)
+			mutex.Unlock()
 			return
 		}
-		mutex.Lock()
 		status, id := ids.Set(context.PostForm("name"), context.PostForm("environment"), passedID)
-		mutex.Unlock()
 		idM := map[string]int{"id": id}
 		context.JSON(status, idM)
+		mutex.Unlock()
 	})
 
 	return router
